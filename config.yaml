@@ -1,0 +1,10 @@
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+
+asr:
+  model_size: medium
+  device: cpu
+
+ingestion:
+  max_video_minutes: 60
