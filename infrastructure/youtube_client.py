@@ -27,10 +27,7 @@ class YouTubeDownloader:
             self.pbar = None
 
     def _update_registry(self, metadata: dict):
-        """
-        Updates the centralized registry.json file.
-        Loads existing data, appends/updates the new video entry, and saves.
-        """
+        """Updates the centralized registry.json file."""
         registry = {}
 
         # Load existing registry if it exists
@@ -39,23 +36,23 @@ class YouTubeDownloader:
                 with open(self.registry_path, "r", encoding="utf-8") as f:
                     registry = json.load(f)
             except json.JSONDecodeError:
-                # Handle corrupted or empty JSON files
                 registry = {}
 
         # Add or update entry using video_id as the unique key
         registry[metadata["video_id"]] = metadata
 
-        # Save updated registry with pretty formatting
+        # Save updated registry
         with open(self.registry_path, "w", encoding="utf-8") as f:
             json.dump(registry, f, ensure_ascii=False, indent=2)
 
     def download(self, url: str) -> dict:
         """
-        Downloads audio from YouTube and returns metadata.
-        Uses yt-dlp with custom headers to prevent 403 Forbidden errors.
+        Downloads VIDEO (not just audio) from YouTube and returns metadata.
+        Safe against unavailable videos or network issues.
         """
         ydl_opts = {
-            "format": "bestaudio/best",
+            "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
+            "merge_output_format": "mp4",
             "outtmpl": str(self.output_dir / "%(id)s.%(ext)s"),
             "progress_hooks": [self._progress_hook],
             "quiet": False,
@@ -70,17 +67,28 @@ class YouTubeDownloader:
             "referer": "https://www.google.com/",
         }
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                # Extract info and download
+                info = ydl.extract_info(url, download=True)
+                # Get the actual filename after merging video and audio
+                final_filename = ydl.prepare_filename(info)
+                # Ensure the extension matches the merged format (mp4)
+                if not final_filename.endswith(".mp4"):
+                    final_filename = os.path.splitext(final_filename)[0] + ".mp4"
 
-        metadata = {
-            "video_id": info["id"],
-            "title": info["title"],
-            "duration": info["duration"],
-            "filepath": str(self.output_dir / f"{info['id']}.{info['ext']}")
-        }
+            metadata = {
+                "video_id": info["id"],
+                "title": info["title"],
+                "duration": info["duration"],
+                "filepath": final_filename
+            }
 
-        # Instead of multiple JSONs, update the single registry
-        self._update_registry(metadata)
+            # Update the single registry
+            self._update_registry(metadata)
+            return metadata
 
-        return metadata
+        except Exception as e:
+            # Safe failure, log error and return empty dict
+            print(f"Error downloading YouTube video ({url}): {e}")
+            return {}
