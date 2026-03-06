@@ -9,10 +9,13 @@ from services.processing.export_pdf import PDFReporter
 from pipeline import Pipeline
 from app.ui.ui_lang import LANG_DICT
 
+
 # --- DIRECTORY CONFIGURATION ---
+# Defines the storage structure for various data types
 DATA_DIRS = {
     k: Path(f"data/{k}") for k in ["raw", "audio", "transcripts", "processed", "reports", "frames"]
 }
+
 for d in DATA_DIRS.values():
     d.mkdir(parents=True, exist_ok=True)
 
@@ -20,7 +23,17 @@ FONT_DIR = Path("assets/fonts")
 DRAFTS_PATH = DATA_DIRS["raw"] / "drafts.json"
 
 
+# --- LANGUAGE MAP FOR LLM ---
+# Mapping UI language codes to full names for prompt engineering
+LANG_MAP = {
+    "PL": "Polish",
+    "RU": "Russian",
+    "EN": "English"
+}
+
+
 # --- CACHING STRATEGY ---
+# Persists the Pipeline object to avoid reloading heavy Whisper models on every rerun
 @st.cache_resource
 def get_pipeline(model_type):
     return Pipeline(DATA_DIRS, whisper_model=model_type)
@@ -32,8 +45,10 @@ def run_ui():
     # --- SESSION STATE INITIALIZATION ---
     if "ui_lang" not in st.session_state:
         st.session_state.ui_lang = "PL"
+
     if "last_analysis" not in st.session_state:
         st.session_state.last_analysis = ""
+
     if "processing_source" not in st.session_state:
         st.session_state.processing_source = False
 
@@ -41,103 +56,181 @@ def run_ui():
     reporter = PDFReporter(FONT_DIR, DATA_DIRS["reports"])
     draft_editor = DraftEditor(reporter, DRAFTS_PATH)
 
-    # --- SIDEBAR ---
+    # --- SIDEBAR: CONTROLS & SETTINGS ---
     with st.sidebar:
+
         st.session_state.ui_lang = st.selectbox(
             "🌐 Language / Język",
             ["PL", "RU", "EN"],
             index=["PL", "RU", "EN"].index(st.session_state.ui_lang)
         )
+
         T = LANG_DICT[st.session_state.ui_lang]
+
         st.header(T["sidebar_header"])
 
-        quality_label = st.radio(T["quality_option"], [T["quality_fast"], T["quality_high"]])
-        quality_map = {T["quality_fast"]: "base", T["quality_high"]: "medium"}
+        # Model Quality Selection
+        quality_label = st.radio(
+            T["quality_option"],
+            [T["quality_fast"], T["quality_high"]]
+        )
+
+        quality_map = {
+            T["quality_fast"]: "base",
+            T["quality_high"]: "medium"
+        }
 
         pipeline = get_pipeline(quality_map[quality_label])
         chat_ui = ChatUI(pipeline.insight_engine)
 
+        # --- SOURCE MANAGEMENT SECTION ---
+        # Fetch available processed sources from the registry
         source_mapping = pipeline.get_human_readable_sources()
+
         selected_names = st.multiselect(
             T["source_select"],
             options=list(source_mapping.keys()),
             default=list(source_mapping.keys())[:1] if source_mapping else None
         )
+
         selected_ids = [source_mapping[name] for name in selected_names]
 
-        st.divider()
-        draft_editor.render_selector(T)
+        # NEW FEATURE: Source Deletion Control
+        if selected_ids:
+            if st.button("🗑️ Delete Selected Source", width="stretch", help="Deletes the first selected source and all associated files."):
+                # For safety, we delete the primary (first) selection to avoid batch accidents
+                target_to_del = selected_ids[0]
+                if pipeline.delete_source(target_to_del):
+                    st.toast(f"Source {target_to_del} deleted successfully.")
+                    st.rerun()
+
         st.divider()
 
-        # Acquisition Method
-        methods_map = {"YouTube": "YouTube", T["method_file"]: "File", T["method_mic"]: "Microphone"}
-        selected_method_label = st.radio(T["option"], list(methods_map.keys()))
+        # Render the Saved Drafts list from the editor module
+        draft_editor.render_selector(T)
+
+        st.divider()
+
+        # --- DATA ACQUISITION METHOD ---
+        methods_map = {
+            "YouTube": "YouTube",
+            T["method_file"]: "File",
+            T["method_mic"]: "Microphone"
+        }
+
+        selected_method_label = st.radio(
+            T["option"],
+            list(methods_map.keys())
+        )
+
         internal_method = methods_map[selected_method_label]
-        use_vision = st.toggle(T["visual_toggle"], value=True)
+
+        use_vision = st.toggle(
+            T["visual_toggle"],
+            value=True
+        )
 
         source_value = None
         rec_duration = 30
+
         if internal_method == "File":
             source_value = st.file_uploader(T["file_label"])
+
         elif internal_method == "Microphone":
             st.warning(T["mic_warning"])
             rec_duration = st.slider(T["rec_duration"], 5, 120, 30)
             source_value = "MIC_ACTIVE"
+
         elif internal_method == "YouTube":
             source_value = st.text_input("YouTube Link:")
 
-        if st.button(T["run_btn"], width="stretch", type="primary", disabled=st.session_state.processing_source):
+        # Trigger Pipeline Processing
+        if st.button(
+            T["run_btn"],
+            width="stretch",
+            type="primary",
+            disabled=st.session_state.processing_source
+        ):
             st.session_state.processing_source = True
             st.rerun()
 
-    # Execution Logic
+    # --- PIPELINE PROCESSING LOGIC ---
     if st.session_state.processing_source:
-        with st.spinner("Lumina is analyzing..."):
-            pipeline.run(internal_method, source_value,
-                         duration=rec_duration if internal_method == "Microphone" else 30, use_vision=use_vision)
+        with st.spinner("Lumina is analyzing the source..."):
+            pipeline.run(
+                internal_method,
+                source_value,
+                duration=rec_duration if internal_method == "Microphone" else 30,
+                use_vision=use_vision
+            )
         st.session_state.processing_source = False
         st.rerun()
 
-    # --- MAIN LAYOUT ---
+    # --- MAIN UI LAYOUT ---
     left_col, right_col = st.columns([1.2, 1])
 
+    # ===============================
+    # LEFT COLUMN: INTERACTIVE TOOLS
+    # ===============================
     with left_col:
-        chat_ui.render(selected_ids=selected_ids, target_lang=st.session_state.ui_lang)
+
+        # AI Chat interface for RAG-based querying
+        chat_ui.render(
+            selected_ids=selected_ids,
+            target_lang=LANG_MAP[st.session_state.ui_lang]
+        )
+
         st.divider()
 
+        # Analysis Actions (MoM and Detail Extraction)
         if selected_ids:
             c1, c2, c3 = st.columns(3)
+
+            # --- GENERATE MINUTES OF MEETING ---
             with c1:
-                # GENERATE MOM
                 if st.button(f"📄 {T['mom_btn']}", width="stretch"):
                     with st.spinner("Generating..."):
-                        res = pipeline.insight_engine.generate_mom(selected_ids[0],
-                                                                   target_lang=st.session_state.ui_lang)
+                        res = pipeline.insight_engine.generate_mom(
+                            selected_ids[0],
+                            target_lang=LANG_MAP[st.session_state.ui_lang]
+                        )
                         st.session_state.last_analysis = res
-                        # Wymuszamy rerun, aby DraftEditor (w tej samej pętli) złapał nową treść
                         st.rerun()
+
+            # --- EXPORT DATA PACKAGE ---
             with c2:
                 zip_data = pipeline.prepare_export(selected_ids[0])
                 if zip_data:
-                    st.download_button(label="Download Audit ZIP", data=zip_data,
-                                       file_name=f"Audit_{selected_ids[0]}.zip", mime="application/zip",
-                                       width="stretch")
+                    st.download_button(
+                        label="Download Audit ZIP",
+                        data=zip_data,
+                        file_name=f"Audit_{selected_ids[0]}.zip",
+                        mime="application/zip",
+                        width="stretch"
+                    )
+
+            # --- DETAILED AUDIT ANALYSIS ---
             with c3:
-                # ANALYZE AUDIT
                 if st.button(f"📊 {T['audit_btn']}", width="stretch"):
                     with st.spinner("Analyzing..."):
-                        res = pipeline.insight_engine.analyze_audit_details(selected_ids[0],
-                                                                            target_lang=st.session_state.ui_lang)
+                        res = pipeline.insight_engine.analyze_audit_details(
+                            selected_ids[0],
+                            target_lang=LANG_MAP[st.session_state.ui_lang]
+                        )
                         st.session_state.last_analysis = res
                         st.rerun()
 
-        # DRAFT EDITOR
+        # Report Editor Section
         current_source_id = selected_ids[0] if selected_ids else "New_Report"
         draft_editor.render(source_name=current_source_id)
 
+    # ===============================
+    # RIGHT COLUMN: VISUAL TRANSCRIPT
+    # ===============================
     with right_col:
         st.subheader(T["trans_header"])
         if selected_ids:
+            # Displays the scrollable transcript with linked visual frames
             pipeline.render_transcript_view(selected_ids[0], T)
         else:
             st.info(T["wait_msg"])
