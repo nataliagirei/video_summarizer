@@ -1,18 +1,39 @@
 import streamlit as st
 
 
+def detect_lang(text: str) -> str:
+    """
+    Simple heuristic to detect language based on the first character.
+    Returns one of: "Russian", "Polish", "English".
+    """
+    if not text:
+        return "English"
+    first_char = text[0].lower()
+    if first_char in "абвгдеёжзийклмнопрстуфхцчшщъыьэюя":
+        return "Russian"
+    elif first_char in "ąćęłńóśżź":
+        return "Polish"
+    else:
+        return "English"
+
+
 class ChatUI:
     """
     Handles the interactive AI Chat interface for the Lumina Audit System.
     Optimized for macOS to prevent UI freezing and redundant inputs.
+    Now supports automatic chat language detection based on user input.
     """
 
     def __init__(self, insight_engine):
         self.insight_engine = insight_engine
 
-    def render(self, selected_ids: list, target_lang: str = "English"):
+    def render(self, selected_ids: list, default_lang: str = "English"):
         """
         Renders the chat window with immediate feedback and stable message flow.
+
+        Parameters:
+        - selected_ids: list of source IDs to query
+        - default_lang: fallback language if detection fails
         """
         # Ensure persistent chat history
         if "messages" not in st.session_state:
@@ -21,7 +42,6 @@ class ChatUI:
         st.subheader("💬 Chat")
 
         # 1. CREATE A SCROLLABLE CONTAINER
-        # We use a fixed-height container to keep the UI clean
         chat_container = st.container(height=450)
 
         # 2. DISPLAY EXISTING HISTORY
@@ -34,30 +54,32 @@ class ChatUI:
         if prompt := st.chat_input("Ask a question about the audit context..."):
 
             # --- STEP A: IMMEDIATE FEEDBACK ---
-            # We display the user's message inside the container BEFORE the heavy AI logic starts
+            # Show user message before AI processing
             with chat_container:
                 with st.chat_message("user"):
                     st.markdown(prompt)
 
-            # Save to session state immediately
+            # Save user message immediately
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-            # --- STEP B: AI PROCESSING ---
+            # --- STEP B: DETECT LANGUAGE ---
+            chat_lang = detect_lang(prompt) or default_lang
+
+            # --- STEP C: AI PROCESSING ---
             answer = ""
             try:
                 if self.insight_engine and selected_ids:
-                    # Show the spinner inside the assistant's message area
                     with chat_container:
                         with st.chat_message("assistant"):
                             with st.spinner("Thinking..."):
-                                # RAG query execution
+                                # Ask AI engine using detected language
                                 response = self.insight_engine.ask(
                                     prompt,
                                     filter_sources=selected_ids,
-                                    target_lang=target_lang
+                                    target_lang=chat_lang
                                 )
 
-                                # Process and normalize the response
+                                # Normalize the response to string
                                 if isinstance(response, dict):
                                     answer = response.get(
                                         "answer",
@@ -66,7 +88,7 @@ class ChatUI:
                                 else:
                                     answer = str(response)
 
-                                # Display the answer immediately
+                                # Display assistant response immediately
                                 st.markdown(answer)
 
                 elif not selected_ids:
@@ -80,12 +102,11 @@ class ChatUI:
                 answer = f"Chat backend error: {str(e)}"
                 st.error(answer)
 
-            # --- STEP C: FINALIZE STATE ---
-            # Append assistant response to history
+            # --- STEP D: FINALIZE STATE ---
+            # Append assistant response to chat history
             st.session_state.messages.append({"role": "assistant", "content": answer})
 
-            # FORCE RERUN: This ensures the input box clears and the state is fully synced
-            # Without this, Streamlit might feel "stuck" for a moment
+            # Force Streamlit rerun to clear input and sync state
             st.rerun()
 
     def clear_history(self):
