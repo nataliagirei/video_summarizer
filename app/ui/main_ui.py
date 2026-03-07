@@ -18,10 +18,6 @@ for d in DATA_DIRS.values():
 FONT_DIR = Path("assets/fonts")
 DRAFTS_PATH = DATA_DIRS["raw"] / "drafts.json"
 
-# --- LANGUAGE MAP FOR AI ENGINE ---
-# Mapping UI codes to full names required by the LLM system prompts
-LANG_MAP = {"PL": "Polish", "RU": "Russian", "EN": "English"}
-
 
 # --- CACHING STRATEGY ---
 @st.cache_resource
@@ -35,19 +31,23 @@ def get_pipeline(model_type):
 
 def run_ui():
     """
-    Main function to render the Lumina Audit AI User Interface.
-    Orchestrates Sidebar, Chat, Editor, and Transcript views.
+    Main function to render the Lumina AI User Interface.
+    Orchestrates Sidebar, Chat, Editor, and Transcript views with full localization.
     """
-    st.set_page_config(page_title="Lumina Audit AI", layout="wide")
+    st.set_page_config(page_title="Lumina AI Assistant", layout="wide")
 
     # --- SESSION STATE INITIALIZATION ---
-    # Global state management for language and processing status
     if "ui_lang" not in st.session_state:
-        st.session_state.ui_lang = "PL"
+        st.session_state.ui_lang = "EN"
     if "last_analysis" not in st.session_state:
         st.session_state.last_analysis = ""
     if "processing_source" not in st.session_state:
         st.session_state.processing_source = False
+
+    # Get active translation dictionary based on selected language
+    T = LANG_DICT[st.session_state.ui_lang]
+    # Store T in session state for ChatUI and other components to access easily
+    st.session_state.T_dict = T
 
     # --- UI SERVICE INITIALIZATION ---
     reporter = PDFReporter(FONT_DIR, DATA_DIRS["reports"])
@@ -56,17 +56,17 @@ def run_ui():
     # --- SIDEBAR: CONFIGURATION & INPUTS ---
     with st.sidebar:
         # 1. Global Language Selector
-        # Changes the entire UI and target AI output language
         st.session_state.ui_lang = st.selectbox(
             "🌐 Interface Language / Język",
             ["PL", "RU", "EN"],
             index=["PL", "RU", "EN"].index(st.session_state.ui_lang)
         )
 
+        # Refresh T after language change
         T = LANG_DICT[st.session_state.ui_lang]
         st.header(T["sidebar_header"])
 
-        # 2. Model Quality Selection (Whisper Transcription Size)
+        # 2. Model Quality Selection
         quality_label = st.radio(
             T["quality_option"],
             [T["quality_fast"], T["quality_high"]]
@@ -80,7 +80,7 @@ def run_ui():
         # Initialize the pipeline core
         pipeline = get_pipeline(quality_map[quality_label])
 
-        # CRITICAL: Sync the engine's internal language with the current UI selection
+        # Sync the engine's internal language with the current UI selection
         pipeline.insight_engine.ui_lang = st.session_state.ui_lang
 
         chat_ui = ChatUI(pipeline.insight_engine)
@@ -94,11 +94,11 @@ def run_ui():
         )
         selected_ids = [source_mapping[name] for name in selected_names] if selected_names else []
 
-        # 4. Source Deletion Logic
+        # 4. Source Deletion Logic (Localized)
         if selected_ids:
-            if st.button("🗑️ " + T.get("delete_btn", "Delete Source"), width="stretch"):
+            if st.button("🗑️ " + T["delete_btn"], width="stretch"):
                 if pipeline.delete_source(selected_ids[0]):
-                    st.toast(f"Source {selected_ids[0]} deleted.")
+                    st.toast(T["save_success"])  # Generic success message
                     st.rerun()
 
         st.divider()
@@ -118,13 +118,11 @@ def run_ui():
         selected_method_label = st.radio(T["option"], list(methods_map.keys()))
         internal_method = methods_map[selected_method_label]
 
-        # Computer Vision Analysis Toggle
         use_vision = st.toggle(T["visual_toggle"], value=True)
 
         source_value = None
         rec_duration = 30
 
-        # Method-specific Input Fields
         if internal_method == "File":
             source_value = st.file_uploader(T["file_label"])
         elif internal_method == "Microphone":
@@ -146,7 +144,7 @@ def run_ui():
 
     # --- PIPELINE EXECUTION (ASYNC WORKER) ---
     if st.session_state.processing_source:
-        with st.spinner("Lumina is analyzing the source..."):
+        with st.spinner("Lumina AI is analyzing the source..."):
             pipeline.run(
                 internal_method,
                 source_value,
@@ -161,72 +159,65 @@ def run_ui():
 
     # LEFT COLUMN: AI Interaction & Drafting
     with left_col:
-        # Chat for contextual Audit queries
-        # Now passing the current UI language to maintain response consistency
-        chat_ui.render(
-            selected_ids=selected_ids
-        )
+        # Chat for contextual queries
+        chat_ui.render(selected_ids=selected_ids)
 
         st.divider()
 
-        # --- QUICK AUDIT ANALYSIS TOOLS ---
+        # --- QUICK ANALYSIS TOOLS (Localized) ---
         if selected_ids:
             c1, c2, c3 = st.columns(3)
 
-            # Generate Minutes of Meeting (MoM)
+            # 1. Summary / Minutes
             with c1:
                 if st.button(f"📄 {T['mom_btn']}", width="stretch"):
-                    with st.spinner("Generating MoM..."):
-                        # FIX: Explicitly passing target_lang from session state
+                    with st.spinner("Processing..."):
                         res = pipeline.insight_engine.generate_mom(
                             selected_ids[0],
                             target_lang=st.session_state.ui_lang
                         )
                         st.session_state.last_analysis = res
 
-            # Export Audit Package (ZIP)
+            # 2. Export Package (ZIP)
             with c2:
                 zip_data = pipeline.prepare_export(selected_ids[0])
                 if zip_data:
                     st.download_button(
-                        label="Download Audit ZIP",
+                        label=f"⬇️ {T['zip_btn']}",
                         data=zip_data,
-                        file_name=f"Audit_{selected_ids[0]}.zip",
+                        file_name=f"Project_{selected_ids[0]}.zip",
                         mime="application/zip",
                         width="stretch"
                     )
 
-            # Analyze Risks & Sentiment
+            # 3. Key Insights / Sentiment
             with c3:
                 if st.button(f"📊 {T['audit_btn']}", width="stretch"):
-                    with st.spinner("Analyzing Audit..."):
-                        # FIX: Explicitly passing target_lang from session state
+                    with st.spinner("Analyzing..."):
                         res = pipeline.insight_engine.analyze_audit_details(
                             selected_ids[0],
                             target_lang=st.session_state.ui_lang
                         )
                         st.session_state.last_analysis = res
 
-        # Professional Audit Report Editor
-        current_source_id = selected_ids[0] if selected_ids else "New_Report"
-        draft_editor.render(source_name=current_source_id)
+        # Professional Document & Report Editor
+        current_source_id = selected_ids[0] if selected_ids else "New_Project"
+        draft_editor.render(T, source_name=current_source_id)
 
     # RIGHT COLUMN: Visual Evidence & Interactive Transcript
     with right_col:
-        # Header with Translation Toggle
         header_row, toggle_row = st.columns([0.6, 0.4])
 
         with header_row:
             st.subheader(T["trans_header"])
 
-        show_original = False
         if selected_ids:
             with toggle_row:
-                # Allows auditing original text vs AI-translated text
-                label = "Pokaż oryginał" if st.session_state.ui_lang == "PL" else "Show Original"
-                show_original = st.toggle(label, value=False, key=f"main_toggle_{selected_ids[0]}")
+                # Localized toggle for original text (supports RU, PL, EN)
+                toggle_label = T.get("toggle_original", "Show Original")
+                show_original = st.toggle(toggle_label, value=False, key=f"main_toggle_{selected_ids[0]}")
 
-            # Fixed-height container for the transcript to maintain layout stability
+            # Fixed-height container for the transcript
             with st.container(height=800, border=True):
                 pipeline.render_transcript_view(
                     selected_ids[0],
