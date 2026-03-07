@@ -1,0 +1,31 @@
+# --- Security & Secrets ---
+.env
+*.env
+.venv/
+env/
+venv/
+ENV/
+
+# --- Python Artifacts ---
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# --- Data (Very Important!) ---
+# We exclude local data folders to keep sensitive recordings off GitHub
+data
+
+# --- Vector Database & Cache ---
+# FAISS indexes and temporary pickle files
+*.faiss
+*.pkl
+*.npy
+
+# --- IDE Settings ---
+.idea/
+.vscode/
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
