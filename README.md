@@ -43,8 +43,7 @@ Lumina AI Assistant is a Python-based application that extracts, transcribes, an
 │   ├── `whisper_client.py` – Wrapper for Whisper ASR model  
 │   └── `youtube_client.py` – Downloads YouTube videos  
 ├── `services/` – Business logic (core application)  
-│   ├── `processing/` – Text processing and export  
-│   │   ├── `export.py` – General export utilities  
+│   ├── `processing/` – Text processing and export
 │   │   ├── `export_pdf.py` – PDF report generation  
 │   │   ├── `text_chunk.py` – Splits large transcripts into chunks  
 │   │   ├── `text_clean.py` – Cleans and normalizes raw text  

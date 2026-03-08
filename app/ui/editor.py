@@ -1,8 +1,10 @@
-import streamlit as st
 import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from threading import RLock
+
+import streamlit as st
+
 
 class DraftEditor:
     """
@@ -177,7 +179,7 @@ class DraftEditor:
                     path = self.reporter.generate_pdf_report(
                         st.session_state.current_draft_title,
                         st.session_state.editor_content,
-                        "Natalia" # Author name
+                        "Natalia"  # Author name
                     )
                     st.session_state.pdf_path = path
                     st.success(T.get("pdf_success", "Done!"))

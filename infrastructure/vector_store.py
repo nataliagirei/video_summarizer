@@ -1,10 +1,10 @@
-import faiss
-import numpy as np
-import pickle
 import os
-import torch
+import pickle
 from pathlib import Path
 from typing import List, Dict, Any
+
+import faiss
+import torch
 from sentence_transformers import SentenceTransformer
 
 # --- CRITICAL STABILITY FIX FOR MAC ---
@@ -15,7 +15,7 @@ class LocalVectorStore:
     def __init__(self, persist_dir: Path = None, model_name: str = "all-MiniLM-L6-v2"):
         """
         Initialize the vector store using SentenceTransformers and FAISS.
-        Optimized for macOS stability and Audit data persistence.
+        Optimized for macOS stability and data persistence.
         """
         # Limit FAISS to a single thread to prevent 'Silent Crashing' on Apple Silicon
         faiss.omp_set_num_threads(1)

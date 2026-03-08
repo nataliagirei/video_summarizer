@@ -1,7 +1,8 @@
-from fpdf import FPDF
+import re
 from datetime import datetime
 from pathlib import Path
-import re
+
+from fpdf import FPDF
 
 
 class PDFReporter(FPDF):

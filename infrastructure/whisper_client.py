@@ -1,8 +1,9 @@
 import json
+import logging
 import os
 from pathlib import Path
+
 from faster_whisper import WhisperModel
-import logging
 
 # Set logging to avoid console cluttering during transcription
 logging.basicConfig(level=logging.ERROR)
@@ -26,7 +27,7 @@ class WhisperTranscriber:
         os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
         try:
-            # Using CPU device for broad compatibility across specialist laptops
+            # Using CPU device for broad compatibility
             self.model = WhisperModel(
                 model_name,
                 device="cpu",
@@ -52,7 +53,6 @@ class WhisperTranscriber:
 
         try:
             # --- Transcription Settings ---
-            # vad_filter: removes silences to keep the audit report concise
             segments, info = self.model.transcribe(
                 str(audio_path),
                 beam_size=5,

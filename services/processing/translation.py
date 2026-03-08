@@ -1,8 +1,10 @@
-import os
 import json
+import os
 import time
 from typing import List, Dict
+
 from groq import Groq
+
 
 class Translator:
     """
@@ -116,7 +118,7 @@ class Translator:
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_payload}
                 ],
-                temperature=0, # Zero temperature ensures deterministic and accurate translation
+                temperature=0,  # Zero temperature ensures deterministic and accurate translation
                 response_format={"type": "json_object"}
             )
 

@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Dict, Any
+
 import tiktoken
+
 from services.processing.text_clean import TextCleaner
 
 
@@ -9,8 +11,8 @@ class Chunk:
     """Represents a processed text segment for the knowledge base."""
     start: float
     end: float
-    text: str          # Context for LLM (with timestamps)
-    vector_text: str   # Clean text for vector embedding (FAISS)
+    text: str  # Context for LLM (with timestamps)
+    vector_text: str  # Clean text for vector embedding (FAISS)
     tokens: int
 
 
@@ -19,6 +21,7 @@ class TextChunker:
     Handles transcript segmentation into optimal blocks for RAG.
     Preserves temporal alignment by injecting timestamps directly into the text context.
     """
+
     def __init__(self, model_name: str = "gpt-4o-mini", max_tokens: int = 150, overlap_tokens: int = 20):
         self.max_tokens = max_tokens
         self.overlap_tokens = overlap_tokens

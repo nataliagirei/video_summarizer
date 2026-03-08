@@ -1,13 +1,13 @@
-import streamlit as st
 from pathlib import Path
-import json
 
+import streamlit as st
+
+from app.ui.ui_lang import LANG_DICT
 # Internal module imports
 from chat import ChatUI
 from editor import DraftEditor
-from services.processing.export_pdf import PDFReporter
 from pipeline import Pipeline
-from app.ui.ui_lang import LANG_DICT
+from services.processing.export_pdf import PDFReporter
 
 # --- DIRECTORY CONFIGURATION ---
 # Ensures all necessary folders exist before the app starts
@@ -172,7 +172,7 @@ def run_ui():
             with c1:
                 if st.button(f"📄 {T['mom_btn']}", width="stretch"):
                     with st.spinner("Processing..."):
-                        res = pipeline.insight_engine.generate_mom(
+                        res = pipeline.insight_engine.generate_summary(
                             selected_ids[0],
                             target_lang=st.session_state.ui_lang
                         )
@@ -194,7 +194,7 @@ def run_ui():
             with c3:
                 if st.button(f"📊 {T['audit_btn']}", width="stretch"):
                     with st.spinner("Analyzing..."):
-                        res = pipeline.insight_engine.analyze_audit_details(
+                        res = pipeline.insight_engine.analyze_key_insights(
                             selected_ids[0],
                             target_lang=st.session_state.ui_lang
                         )

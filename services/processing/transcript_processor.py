@@ -1,9 +1,10 @@
-import json
 import io
+import json
 import zipfile
-import pandas as pd
 from pathlib import Path
 from typing import Dict, List
+
+import pandas as pd
 
 
 class TranscriptProcessor:

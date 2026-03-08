@@ -1,12 +1,10 @@
-from pathlib import Path
-from datetime import datetime
-import json
-import pandas as pd
-import io
-import zipfile
-import streamlit as st
 import gc
+import json
 import os
+from datetime import datetime
+from pathlib import Path
+
+import streamlit as st
 
 # Force environment stability for FAISS on macOS and prevent thread conflicts
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -35,8 +33,8 @@ def format_timestamp(seconds: float) -> str:
 
 class Pipeline:
     """
-    Main orchestration class for the Lumina Audit AI.
-    Handles the end-to-end lifecycle of an audit source including:
+    Main orchestration class for the Lumina AI.
+    Handles:
     1. Acquisition: Downloading from YouTube, recording from Mic, or processing local files.
     2. Transcription: Converting audio to text using OpenAI Whisper.
     3. RAG Indexing: Preparing data for context-aware AI chat.

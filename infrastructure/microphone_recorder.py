@@ -1,7 +1,8 @@
+import time
+from pathlib import Path
+
 import sounddevice as sd
 import soundfile as sf
-from pathlib import Path
-import time
 
 
 class AudioRecorder:
@@ -44,6 +45,7 @@ class AudioRecorder:
 
     def _make_callback(self, file):
         """Generates a callback to write audio blocks to file in real-time."""
+
         def callback(indata, frames, time_info, status):
             if status:
                 # Important for debugging input overflows or device issues

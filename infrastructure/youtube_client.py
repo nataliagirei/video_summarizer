@@ -1,8 +1,9 @@
-import yt_dlp
-from pathlib import Path
-from tqdm import tqdm
 import json
 import os
+from pathlib import Path
+
+import yt_dlp
+from tqdm import tqdm
 
 
 class YouTubeDownloader:
@@ -47,7 +48,7 @@ class YouTubeDownloader:
 
     def download(self, url: str) -> dict:
         """
-        Downloads VIDEO (not just audio) from YouTube and returns metadata.
+        Downloads video and audio from YouTube and returns metadata.
         Safe against unavailable videos or network issues.
         """
         ydl_opts = {
@@ -81,6 +82,7 @@ class YouTubeDownloader:
                 "video_id": info["id"],
                 "title": info["title"],
                 "duration": info["duration"],
+                "video_url": info.get("webpage_url"),
                 "filepath": final_filename
             }
 

@@ -8,7 +8,7 @@ LANG_DICT = {
         "load_draft": "📂 Load",
         "delete_draft_btn": "Delete Draft",
         "run_btn": "🚀 Process",
-        "option": "Upload Source via:",  # изменено
+        "option": "Upload Source via:",
         "method_file": "Upload File",
         "method_mic": "Use Microphone",
         "visual_toggle": "Enable Visual AI",
@@ -45,7 +45,7 @@ LANG_DICT = {
         "load_draft": "📂 Загрузить",
         "delete_draft_btn": "Удалить",
         "run_btn": "🚀 Запустить",
-        "option": "Выберите источник:",  # изменено
+        "option": "Выберите источник:",
         "method_file": "Загрузить файл",
         "method_mic": "Микрофон",
         "visual_toggle": "Включить визуальный AI",
@@ -82,7 +82,7 @@ LANG_DICT = {
         "load_draft": "📂 Wczytaj",
         "delete_draft_btn": "Usuń",
         "run_btn": "🚀 Przetwórz",
-        "option": "Wgraj źródło przez:",  # изменено
+        "option": "Wgraj źródło przez:",
         "method_file": "Prześlij plik",
         "method_mic": "Mikrofon",
         "visual_toggle": "Włącz wizualne AI",

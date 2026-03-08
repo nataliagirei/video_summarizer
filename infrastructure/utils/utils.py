@@ -1,9 +1,8 @@
 import json
-from pathlib import Path
-from datetime import datetime
-import tempfile
 import os
-import shutil
+import tempfile
+from datetime import datetime
+from pathlib import Path
 
 
 # --- TIME UTILS ---
@@ -81,11 +80,11 @@ def delete_files_by_prefix(folder: Path, prefix: str, silent: bool = True):
 
 # --- REGISTRY / DRAFT UTILS ---
 def delete_source_data(
-    source_id: str,
-    data_dirs: dict,
-    drafts_file: Path = None,
-    registry_file: Path = None,
-    silent: bool = True
+        source_id: str,
+        data_dirs: dict,
+        drafts_file: Path = None,
+        registry_file: Path = None,
+        silent: bool = True
 ):
     """
     Delete all source-related data from registry, drafts, and data directories.
